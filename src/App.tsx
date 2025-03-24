@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Terminal } from 'lucide-react';
 import { CollatzExplanation } from './components/CollatzExplanation';
 import { ControlPanel } from './components/ControlPanel';
@@ -8,33 +8,60 @@ import { calculateCollatzSequence } from './utils/collatzCalculator';
 
 function App() {
   const [startNumber, setStartNumber] = useState<number>(27);
-  const [delay, setDelay] = useState<number>(100);
+  const [delay, setDelay] = useState<number>(30);
   const [steps, setSteps] = useState<Step[]>([]);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
   const [hasLoop, setHasLoop] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [rules, setRules] = useState<CollatzRules>(defaultRules);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const handleCalculate = async (n: number) => {
+  const handleCalculate = useCallback(async (n: number) => {
+    if (isCalculating) return;
+    
+    // 新しい計算を開始する前に既存の計算をキャンセル
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     setIsCalculating(true);
     setSteps([]);
     setHasLoop(false);
+    setError(null);
 
     try {
-      await calculateCollatzSequence(n, rules, delay, (newSteps) => {
-        setSteps([...newSteps]);
-      });
+      await calculateCollatzSequence(n, rules, delay, (newStep: Step) => {
+        setSteps(prev => [...prev, newStep]);
+      }, controller.signal);
     } catch (error) {
-      setHasLoop(true);
+      if (error instanceof Error) {
+        if (error.message !== 'Calculation cancelled') {
+          setError(error.message);
+          if (error.message.startsWith('Loop detected')) {
+            setHasLoop(true);
+          }
+        }
+      }
+    } finally {
+      setIsCalculating(false);
+      abortControllerRef.current = null;
     }
-    
-    setIsCalculating(false);
-  };
+  }, [delay, isCalculating, rules]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setRules(defaultRules);
     setSteps([]);
     setHasLoop(false);
-  };
+    setError(null);
+    setIsCalculating(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-green-500 p-4 sm:p-8 font-mono">
@@ -59,7 +86,7 @@ function App() {
         />
 
         <div className="mt-4 sm:mt-6">
-          <StepsDisplay steps={steps} hasLoop={hasLoop} />
+          <StepsDisplay steps={steps} hasLoop={hasLoop} error={error} />
         </div>
       </div>
     </div>

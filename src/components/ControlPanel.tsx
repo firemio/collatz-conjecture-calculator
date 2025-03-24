@@ -24,6 +24,64 @@ export function ControlPanel({
   onCalculate,
   onReset,
 }: Props) {
+  const [startNumberInput, setStartNumberInput] = React.useState(startNumber.toString());
+  const [delayInput, setDelayInput] = React.useState(delay.toString());
+  const [evenDivisorInput, setEvenDivisorInput] = React.useState(rules.evenDivisor.toString());
+  const [oddMultiplierInput, setOddMultiplierInput] = React.useState(rules.oddMultiplier.toString());
+
+  // ルールが変更されたときに入力値を更新
+  React.useEffect(() => {
+    setEvenDivisorInput(rules.evenDivisor.toString());
+    setOddMultiplierInput(rules.oddMultiplier.toString());
+  }, [rules]);
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setStartNumberInput(value);
+    const num = parseInt(value);
+    if (!isNaN(num) && num > 0) {
+      setStartNumber(num);
+    }
+  };
+
+  const handleDelayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDelayInput(value);
+    const num = parseInt(value);
+    if (!isNaN(num) && num >= 0) {
+      setDelay(Math.min(2000, num));
+    }
+  };
+
+  const handleEvenDivisorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEvenDivisorInput(value);
+    const num = parseInt(value);
+    if (!isNaN(num) && num > 0) {
+      setRules(prev => ({ ...prev, evenDivisor: num }));
+    }
+  };
+
+  const handleOddMultiplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setOddMultiplierInput(value);
+    const num = parseInt(value);
+    if (!isNaN(num) && num > 0) {
+      setRules(prev => ({ ...prev, oddMultiplier: num }));
+    }
+  };
+
+  const handleInputBlur = (
+    value: string,
+    setValue: (value: string) => void,
+    defaultValue: number
+  ) => {
+    const num = parseInt(value);
+    if (isNaN(num) || num <= 0) {
+      setValue(defaultValue.toString());
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -32,8 +90,14 @@ export function ControlPanel({
           <input
             type="number"
             min="1"
-            value={startNumber}
-            onChange={(e) => setStartNumber(parseInt(e.target.value) || 1)}
+            value={startNumberInput}
+            onChange={handleNumberChange}
+            onBlur={() => handleInputBlur(startNumberInput, setStartNumberInput, 1)}
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e' || e.key === '.') {
+                e.preventDefault();
+              }
+            }}
             className="bg-black border border-green-500 text-green-500 p-2 rounded w-full text-sm sm:text-base"
           />
         </div>
@@ -44,9 +108,14 @@ export function ControlPanel({
             type="number"
             min="0"
             max="2000"
-            step="10"
-            value={delay}
-            onChange={(e) => setDelay(parseInt(e.target.value) || 0)}
+            value={delayInput}
+            onChange={handleDelayChange}
+            onBlur={() => handleInputBlur(delayInput, setDelayInput, 0)}
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e' || e.key === '.') {
+                e.preventDefault();
+              }
+            }}
             className="bg-black border border-green-500 text-green-500 p-2 rounded w-full text-sm sm:text-base"
           />
         </div>
@@ -60,11 +129,13 @@ export function ControlPanel({
             <input
               type="number"
               min="1"
-              step="1"
-              value={rules.evenDivisor}
-              onChange={(e) => {
-                const evenDivisor = Math.max(1, parseInt(e.target.value) || 2);
-                setRules({ ...rules, evenDivisor });
+              value={evenDivisorInput}
+              onChange={handleEvenDivisorChange}
+              onBlur={() => handleInputBlur(evenDivisorInput, setEvenDivisorInput, 2)}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === 'e' || e.key === '.') {
+                  e.preventDefault();
+                }
               }}
               className="bg-black border border-green-500 text-green-500 p-2 rounded w-full text-sm sm:text-base"
             />
@@ -74,12 +145,14 @@ export function ControlPanel({
             <input
               type="number"
               min="1"
-              step="1"
-              value={rules.oddMultiplier}
-              onChange={(e) => {
-                const oddMultiplier = Math.max(1, parseInt(e.target.value) || 3);
-                setRules({ ...rules, oddMultiplier });
-              }}
+              value={oddMultiplierInput}
+              onChange={handleOddMultiplierChange}
+              onBlur={() => handleInputBlur(oddMultiplierInput, setOddMultiplierInput, 3)}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === 'e' || e.key === '.') {
+                  e.preventDefault();
+              }
+            }}
               className="bg-black border border-green-500 text-green-500 p-2 rounded w-full text-sm sm:text-base"
             />
           </div>
